@@ -1,0 +1,95 @@
+#include <SPI.h>
+#include "nRF24L01.h"
+#include "RF24.h"
+
+RF24 radio(7, 8);
+
+const byte rxAddr[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+ while (!Serial);
+  Serial.begin(9600);
+  
+  radio.begin();
+  radio.openReadingPipe(0, rxAddr);
+  
+  radio.startListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int num;
+  int CntOfBat, TyBat, SoChg, VolBat, TempBat, ResBat;
+  int index, unitofres;
+  float fVolBat, fTempBat, fResBat;
+  
+  if (radio.available())
+  {
+    char text[40] = {0};
+//    radio.read(&text, sizeof(text));
+
+//    int i=0;
+//    while(text[i]!='\0') {
+//      text[i]+=48;
+//      i++;
+//    }
+
+//    radio.read(&TyBat, sizeof(TyBat));
+//    radio.read(&SoChg, sizeof(SoChg));
+//    radio.read(&VolBat, sizeof(VolBat));
+//    radio.read(&TempBat, sizeof(TempBat));
+//    radio.read(&ResBat, sizeof(ResBat));
+//    radio.read(&num, sizeof(num));
+
+    radio.read(&text, sizeof(text));
+//    Serial.print(TyBat, DEC);Serial.print("  ");
+//    Serial.print(SoChg, DEC);Serial.print("  ");
+//    Serial.print(VolBat, DEC);Serial.print("  ");
+//    Serial.print(TempBat, DEC);Serial.print("  ");
+//    Serial.print(ResBat, DEC);Serial.print("  ");
+//    Serial.print("Display as Text: "); 
+    Serial.println(text);
+
+ //   Serial.print("Display as Num : ");
+    index=0;
+    CntOfBat = (int)(text[index]-48); index++; index++;
+ //   Serial.print(CntOfBat, DEC); Serial.print(" ");
+
+    TyBat =(int)(text[index]-48); index++; //1
+ //   Serial.print(TyBat, DEC); Serial.print(" ");
+
+    index++; //2
+    SoChg = (int)(text[index]-48)*100; index++; //3
+    SoChg = SoChg + (int)(text[index]-48)*10; index++; //4
+    SoChg = SoChg + (int)(text[index]-48);
+//    Serial.print(SoChg, DEC); Serial.print("% ");    
+
+    index++;index++; //5
+    VolBat = ((int)(text[index]-48))*100; index++;
+    VolBat = VolBat + ((int)(text[index]-48))*10; index++;
+    VolBat = VolBat + ((int)(text[index]-48));
+    fVolBat = (float)VolBat/10.0;
+//    Serial.print(fVolBat); Serial.print("V ");
+        
+    index++;index++;
+    TempBat = (int) (text[index]-48)*100; index++;
+    TempBat = TempBat + (int)(text[index]-48)*10; index++;
+    TempBat = TempBat + (int)(text[index]-48);
+    fTempBat = (float)TempBat/10.0;
+//    Serial.print(fTempBat); Serial.print("C ");
+     
+    index++; index++;
+    ResBat = (int)(text[index]-48)*1000; index++;
+    ResBat = ResBat + (int) (text[index]-48)*100; index++;
+    ResBat = ResBat + (int)(text[index]-48)*10; index++;
+    ResBat = ResBat + (int)(text[index]-48);
+    fResBat = (float)ResBat/10.0;
+//    Serial.print(fResBat); index++;index++;
+
+//    unitofres = (int)(text[index]-48);
+//    if (unitofres == 1) Serial.println("Kohm");
+//    else if (unitofres == 2) Serial.println("Mohm");
+//    else Serial.println("ohm");
+  }
+}
