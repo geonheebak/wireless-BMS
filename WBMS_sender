@@ -1,0 +1,275 @@
+#include <FastIO.h>
+#include <I2CIO.h>
+#include <LCD.h>
+#include <LiquidCrystal.h>
+#include <LiquidCrystal_I2C.h>
+#include <LiquidCrystal_SR.h>
+#include <LiquidCrystal_SR2W.h>
+#include <LiquidCrystal_SR3W.h>
+
+#include <SPI.h>
+#include "nRF24L01.h"
+#include "RF24.h"
+
+#include <Wire.h>  // Comes with Arduino IDE
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
+
+RF24 radio(7, 8);
+
+const byte rxAddr[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+ while (!Serial);
+  Serial.begin(9600);
+
+  lcd.begin(20,4);         // initialize the lcd for 20 chars 4 lines, turn on backlight
+
+// ------- Quick 2 blinks of backlight  -------------
+  for(int i = 0; i< 1; i++)
+  {
+    lcd.backlight();
+    delay(250);
+    lcd.noBacklight();
+    delay(250);
+  }
+  lcd.backlight(); // finish with backlight on  
+//-------- Write characters on the display ------------------
+  // NOTE: Cursor Position: Lines and Characters start at 0  
+  lcd.setCursor(0,0); //Start at character 4 on line 0
+  lcd.print("Welcome to BMS v1.0");
+  delay(1000);
+  lcd.setCursor(0,1);
+  lcd.print("-Collector Module");
+  delay(1000);  
+  lcd.setCursor(0,2);
+  lcd.print("-Received via RF");
+  lcd.setCursor(2,3);
+  delay(1000);   
+  lcd.print("[ 25th,Nov.2020 ]");
+  delay(2000);
+
+  lcd.clear();
+  
+  radio.begin();
+  radio.openReadingPipe(0, rxAddr);
+  
+  radio.startListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int CntOfBat;
+  int index;
+  int TyBat_1, TyBat_2;
+  int SoChg_1, SoChg_2;
+  int TempBat_1, TempBat_2;
+  int VolBat_1_a, VolBat_1_b, VolBat_2_a, VolBat_2_b;
+  int ResBat_1_a, ResBat_1_b, ResBat_2_a, ResBat_2_b;
+  int tmp, k;
+
+  char text00[30]={0}, text10[30]={0};
+  char text01[30]={0}, text11[30]={0};
+  char text02[30]={0}, text12[30]={0};
+  char text03[30]={0}, text13[30]={0};
+
+  if (radio.available())
+//  if (1) 
+  {
+    char text[40] = {0};
+
+    lcd.setCursor(0,0);
+    lcd.write("#1:1");
+    lcd.setCursor(0,2);
+    lcd.write("#2:2"); 
+    radio.read(&text, sizeof(text));
+    Serial.println(text);
+
+ //   Serial.print("Display as Num : ");
+    index=0; // text[0] = 'Q'
+    index++; // 1
+    CntOfBat = (int)(text[index]-48); index++; // 2
+
+    TyBat_1 =(int)(text[index]-48); index++; //3
+
+    SoChg_1 = (int)(text[index]-48)*100; index++; //4
+    SoChg_1 = SoChg_1 + (int)(text[index]-48)*10; index++; // 5
+    SoChg_1 = SoChg_1 + (int)(text[index]-48);
+
+    index++; //6
+    VolBat_1_a = ((int)(text[index]-48))*10; index++; // 7
+    VolBat_1_a = VolBat_1_a + ((int)(text[index]-48)); index++; // 8
+    VolBat_1_b = ((int)(text[index]-48));
+        
+    index++; // 9
+    TempBat_1 = (int) (text[index]-48)*10; index++; // 10
+    TempBat_1 = TempBat_1 + (int)(text[index]-48);
+     
+    index++; // 11;
+    ResBat_1_a = (int)(text[index]-48); index++; // 12
+
+    ResBat_1_b = (int)(text[index]-48)*10; index++; // 13
+    ResBat_1_b = ResBat_1_b + (int)(text[index]-48); 
+
+    index++; // 14
+    TyBat_2 =(int)(text[index]-48); index++; //15
+
+    SoChg_2 = (int)(text[index]-48)*100; index++; //16
+    SoChg_2 = SoChg_2 + (int)(text[index]-48)*10; index++; // 17
+    SoChg_2 = SoChg_2 + (int)(text[index]-48);
+
+    index++; //18
+    VolBat_2_a = ((int)(text[index]-48))*10; index++; // 19
+    VolBat_2_a = VolBat_2_a + ((int)(text[index]-48)); index++; // 20
+    VolBat_2_b = ((int)(text[index]-48));
+        
+    index++; // 21
+    TempBat_2 = (int) (text[index]-48)*10; index++; // 22
+    TempBat_2 = TempBat_2 + (int)(text[index]-48);
+     
+    index++; // 23;
+    ResBat_2_a = (int)(text[index]-48); index++; // 24
+
+    ResBat_2_b = (int)(text[index]-48)*10; index++; // 25
+    ResBat_2_b = ResBat_2_b + (int)(text[index]-48); 
+
+    // #1 : SOC
+    lcd.setCursor(5,0);
+    for(int j=0; j<30; j++) text00[j]=0;
+    tmp=(int)SoChg_1; index=0;
+    for (int j=2; j>=0; j--) {
+      k = tmp/pow(10,j);
+      text00[index]=k+48;
+      tmp = tmp - k*pow(10,j);
+      index++;
+    }
+    lcd.write(text00);
+    lcd.setCursor(9,0);
+    lcd.write("%");
+
+    // #1 : Voltage
+    for(int j=0; j<30; j++) text10[j]=0;
+    tmp=VolBat_1_a; index=0;
+    for (int j=1; j>=0; j--) {
+      k = tmp/pow(10,j);
+      text10[index]=k+48;
+      tmp = tmp - k*pow(10,j);
+      index++;
+    }
+    text10[index] = '.'; index++;
+    text10[index] = VolBat_1_b+48;
+
+    lcd.setCursor(11,0);
+    lcd.write(text10);
+    lcd.setCursor(16,0);
+    lcd.write("Volt");
+
+    // #1 : Temperature
+    for(int j=0; j<30; j++) text01[j]=0; 
+    tmp=TempBat_1; index=0;
+    for (int j=1; j>=0; j--) {
+      k = tmp/pow(10,j);
+      text01[index]=k+48;
+      tmp = tmp - k*pow(10,j);
+      index++;
+    }
+    lcd.setCursor(6,1);
+    lcd.write(text01); 
+    lcd.setCursor(9,1);
+    lcd.write("C"); 
+
+    // #1 : Internal Resistance
+    for(int j=0; j<30; j++) text11[j]=0; 
+    tmp=ResBat_1_a; index=0;
+    for (int j=1; j>=0; j--) {
+      k = tmp/pow(10,j);
+      text11[index]=k+48;
+      tmp = tmp - k*pow(10,j);
+      index++;
+    }
+    text11[index] = '.'; index++;
+    tmp=ResBat_1_b;
+    for (int j=1; j>=0; j--) {
+      k = tmp/pow(10,j);
+      text11[index]=k+48;
+      tmp = tmp - k*pow(10,j);
+      index++;
+    }        
+    lcd.setCursor(11,1);
+    lcd.write(text11);
+    lcd.setCursor(17,1);
+    lcd.write("ohm");
+
+    // ---- 2nd Battery ----   222222222222222222222
+    // #2 battery : SOC
+    lcd.setCursor(5,2);
+    for(int j=0; j<30; j++) text00[j]=0;
+    tmp=(int)SoChg_2; index=0;
+    for (int j=2; j>=0; j--) {
+      k = tmp/pow(10,j);
+      text00[index]=k+48;
+      tmp = tmp - k*pow(10,j);
+      index++;
+    }
+    lcd.write(text00);
+    lcd.setCursor(9,2);
+    lcd.write("%");
+
+    // #2 battery : Voltage
+    for(int j=0; j<30; j++) text10[j]=0;
+    tmp=VolBat_2_a; index=0;
+    for (int j=1; j>=0; j--) {
+      k = tmp/pow(10,j);
+      text10[index]=k+48;
+      tmp = tmp - k*pow(10,j);
+      index++;
+    }
+    text10[index] = '.'; index++;
+    text10[index] = VolBat_2_b+48;
+
+    lcd.setCursor(11,2);
+    lcd.write(text10);
+    lcd.setCursor(16,2);
+    lcd.write("Volt");
+
+    // #2 battery : Temperature
+    for(int j=0; j<30; j++) text01[j]=0; 
+    tmp=TempBat_2; index=0;
+    for (int j=1; j>=0; j--) {
+      k = tmp/pow(10,j);
+      text01[index]=k+48;
+      tmp = tmp - k*pow(10,j);
+      index++;
+    }
+    lcd.setCursor(6,3);
+    lcd.write(text01); 
+    lcd.setCursor(9,3);
+    lcd.write("C"); 
+
+    // #2 battery : Internal Resistance
+    for(int j=0; j<30; j++) text11[j]=0; 
+    tmp=ResBat_2_a; index=0;
+    for (int j=1; j>=0; j--) {
+      k = tmp/pow(10,j);
+      text11[index]=k+48;
+      tmp = tmp - k*pow(10,j);
+      index++;
+    }
+    text11[index] = '.'; index++;
+    tmp=ResBat_2_b;
+    for (int j=1; j>=0; j--) {
+      k = tmp/pow(10,j);
+      text11[index]=k+48;
+      tmp = tmp - k*pow(10,j);
+      index++;
+    }        
+    lcd.setCursor(11,3);
+    lcd.write(text11);
+    lcd.setCursor(17,3);
+    lcd.write("ohm");
+
+    delay(2000);
+
+  }
+}
